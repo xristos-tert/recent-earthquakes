@@ -19,6 +19,10 @@ L.control.zoom({
 map.createPane('wavesPane');
 map.getPane('wavesPane').style.zIndex = 250;
 
+// Pane for land mask (hides waves when they hit land)
+map.createPane('landMaskPane');
+map.getPane('landMaskPane').style.zIndex = 260;
+
 // Natural Earth 110m land polygons — used for SVG clip path + Turf land detection
 const LAND_GEOJSON_URL = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_land.geojson';
 let landGeoJSON = null;
@@ -28,76 +32,23 @@ async function loadLandMask() {
     try {
         const res = await fetch(LAND_GEOJSON_URL);
         landGeoJSON = await res.json();
-        // No visible rendering — the GeoJSON is used only for:
-        // 1. SVG clipPath to clip waves at coastlines (buildOceanClipPath)
-        // 2. Turf.js land detection (isOnLand)
+        
+        // Render the land polygons as a solid mask over the waves
+        L.geoJSON(landGeoJSON, {
+            style: {
+                fillColor: '#0f172a', // matches --bg-dark
+                fillOpacity: 1,
+                stroke: false
+            },
+            pane: 'landMaskPane',
+            interactive: false
+        }).addTo(map);
+        
+        clipPathReady = true;
     } catch (e) {
         console.error('Land mask load error:', e);
     }
 }
-
-// Build an SVG <clipPath> that defines the OCEAN area (world rect minus land polygons).
-// Applied to the wavesPane SVG so waves are invisible over land.
-function buildOceanClipPath() {
-    if (!landGeoJSON) return;
-
-    const wavePane = map.getPane('wavesPane');
-    const svg = wavePane.querySelector('svg');
-    if (!svg) return; // SVG created lazily by Leaflet on first layer add
-
-    // Ensure <defs> exists
-    let defs = svg.querySelector('defs');
-    if (!defs) {
-        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        svg.insertBefore(defs, svg.firstChild);
-    }
-
-    // Replace existing clip path
-    const old = defs.querySelector('#ocean-clip');
-    if (old) old.remove();
-
-    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
-    clipPath.setAttribute('id', 'ocean-clip');
-
-    // World bounding rect in layer coordinates (huge, covers all zoom levels)
-    const pad = 50000;
-    const tl = map.latLngToLayerPoint([85, -180]);
-    const br = map.latLngToLayerPoint([-85, 180]);
-    let d = `M${tl.x - pad},${tl.y - pad} L${br.x + pad},${tl.y - pad} L${br.x + pad},${br.y + pad} L${tl.x - pad},${br.y + pad} Z `;
-
-    // Subtract each land polygon using even-odd rule → leaves only ocean
-    for (const feature of landGeoJSON.features) {
-        const geom = feature.geometry;
-        const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
-        for (const rings of polys) {
-            const outer = rings[0];
-            const pts = [];
-            for (const coord of outer) {
-                const lp = map.latLngToLayerPoint([coord[1], coord[0]]);
-                pts.push(`${lp.x.toFixed(0)},${lp.y.toFixed(0)}`);
-            }
-            if (pts.length >= 3) {
-                d += `M${pts[0]} L${pts.slice(1).join(' L')} Z `;
-            }
-        }
-    }
-
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    path.setAttribute('fill-rule', 'evenodd');
-    clipPath.appendChild(path);
-    defs.appendChild(clipPath);
-
-    // Apply clip to the entire wavesPane SVG
-    svg.setAttribute('clip-path', 'url(#ocean-clip)');
-    clipPathReady = true;
-}
-
-// Rebuild clip path on zoom (layer coordinates change)
-map.on('zoomend', () => {
-    clipPathReady = false;
-    buildOceanClipPath();
-});
 
 function isOnLand(lon, lat) {
     if (!landGeoJSON) return false;
@@ -140,9 +91,6 @@ function triggerTsunamiAnimation(latlng, color, mag) {
                 opacity: 1,
                 interactive: false
             }).addTo(map);
-
-            // Build/rebuild clip path now that the SVG element exists
-            if (!clipPathReady) buildOceanClipPath();
 
             const duration = 3000; // 3 seconds
             const startTime = performance.now();
@@ -257,16 +205,16 @@ function processData(geojsonData) {
 
             let tsunamiWarning;
             if (onLand) {
-                tsunamiWarning = `<div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">Χερσαίος σεισμός</div>`;
+                tsunamiWarning = `<div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">Inland earthquake</div>`;
             } else if (hasTsunami) {
-                tsunamiWarning = `<div style="color:#ef4444;font-weight:bold;margin-top:4px;">⚠️ Προειδοποίηση Τσουνάμι</div><div style="font-size:0.75rem;color:#38bdf8;">Κλικ για εξομοίωση κυμάτων</div>`;
+                tsunamiWarning = `<div style="color:#ef4444;font-weight:bold;margin-top:4px;">Tsunami Warning</div><div style="font-size:0.75rem;color:#38bdf8;">Click to simulate waves</div>`;
             } else {
-                tsunamiWarning = `<div style="font-size:0.75rem;color:#38bdf8;margin-top:4px;">Κλικ για εξομοίωση κυμάτων</div>`;
+                tsunamiWarning = `<div style="font-size:0.75rem;color:#38bdf8;margin-top:4px;">Click to simulate waves</div>`;
             }
             
             marker.bindPopup(`
                 <div class="popup-title">Magnitude ${mag.toFixed(1)}</div>
-                <div style="font-size:0.8rem; margin-bottom:4px">Βάθος: ${depth.toFixed(1)} km</div>
+                <div style="font-size:0.8rem; margin-bottom:4px">Depth: ${depth.toFixed(1)} km</div>
                 <div style="margin-bottom:8px">${feature.properties.place}</div>
                 <div style="font-size:0.8rem; opacity:0.8">${time}</div>
                 ${tsunamiWarning}
