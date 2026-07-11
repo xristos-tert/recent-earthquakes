@@ -1,0 +1,15 @@
+{
+  "name": "recent-earthquakes",
+  "version": "1.0.0",
+  "description": "Καλωσήρθες στον κόσμο των AI Agents! Αυτό το project δημιουργήθηκε για να πειραματιστείς και να μάθεις πώς λειτουργεί το Antigravity.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@turf/turf": "^7.3.5"
+  }
+}
