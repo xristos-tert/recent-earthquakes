@@ -1,26 +1,34 @@
 # Recent Earthquakes Visualizer
 
-This is a simple web-based dashboard that pulls recent global earthquake data (past 24 hours, magnitude 2.5 and above) from the USGS API and visualizes it on an interactive map.
+This is a web-based dashboard that tracks and visualizes recent global earthquakes (past 24 hours, magnitude 2.5 and above) using the USGS Earthquake API.
 
-It's built with vanilla JavaScript and Leaflet.js, using CartoDB's Dark Matter tiles for a clean, minimal look. The markers scale automatically based on the earthquake's magnitude.
+The UI is built with vanilla JavaScript, Leaflet.js, and Turf.js for spatial calculations. It employs a strict, terminal-inspired aesthetic for a professional GIS feel.
 
-## How the Tsunami Animation Works (And Why It's Fake)
+## Methodology: The Layered Map Architecture
 
-When you click on an earthquake that happened in the ocean, it triggers a visual "tsunami wave" animation. 
+When an oceanic earthquake marker is clicked, a visual "tsunami wave" animation is triggered. To make this wave look realistic, it needs to be visible in the ocean but disappear (clip) when it hits land.
 
-I want to be very clear here: this animation is entirely for visual flair and is not scientifically accurate in any way. Here is why:
+Instead of relying on fragile SVG clip-paths, this project utilizes a professional **layered GIS architecture** to achieve seamless masking. The map is constructed from the bottom up in four distinct layers (Leaflet panes) controlled by strict z-indexes:
 
-1. No depth data: Real tsunami waves travel much faster in deep ocean water and slow down dramatically when they hit the continental shelf, while their height increases. This script assumes the wave travels at a constant speed everywhere.
-2. Perfect circles: Real waves refract and bend around islands and coastlines. The waves in this project are just concentric CSS circles that expand uniformly.
-3. Coastline clipping: The script uses Turf.js and a Natural Earth polygon dataset to detect where the land is. I'm using a Leaflet GeoJSON mask to simply hide the CSS circles when they overlap with land. It creates a cool visual effect of the wave "hitting" the coast, but it does not simulate actual wave run-up or energy dissipation.
-4. Arbitrary radius: The maximum distance the waves travel is based on a very rough empirical formula using the Gutenberg-Richter scale, not actual fault line energy modeling.
+1. **The Ocean Layer (Base)**
+   There is no traditional base map image tile for the ocean. Instead, the raw background of the map container is painted a solid near-black CSS color.
+   
+2. **The Waves Layer (zIndex: 250)**
+   The expanding tsunami circles are drawn here. They naturally expand in the empty ocean space.
 
-## Running it
+3. **The Solid Land Layer (zIndex: 260)**
+   A medium-resolution (50m) Natural Earth GeoJSON dataset (`ne_50m_land.geojson`) is rendered as a solid, opaque grey polygon representing all global landmasses. 
+   Because this layer sits *above* the waves, any expanding wave that crosses the coastline simply slides *underneath* the opaque land polygon, hiding it perfectly without any complex mathematical clipping.
 
-You don't need a build step. Just open `index.html` in your browser, or run a simple local server in the project directory:
+4. **The Labels & Borders Layer (zIndex: 270)**
+   A specialized CartoDB map tile layer (`dark_only_labels`) is placed at the absolute top. This layer has a transparent background and contains *only* country borders, city names, and geographic labels. It sits on top of our solid GeoJSON land, ensuring that all map text remains visible and is not covered by the land polygons.
+
+*Note on Wave Physics: The tsunami animations are strictly for visual effect. The waves travel uniformly and their radius is determined by a simplified Gutenberg-Richter empirical calculation. They do not simulate actual ocean depth, wave refraction, or true run-up energy dissipation.*
+
+## Running Locally
+
+No build tools are required. Open `index.html` in your browser, or start a local HTTP server:
 
 ```bash
-npx serve
-# or
 python -m http.server
 ```

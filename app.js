@@ -38,7 +38,7 @@ async function loadLandMask() {
         // Draw the solid land mass OVER the waves
         L.geoJSON(landGeoJSON, {
             style: {
-                fillColor: '#111111', // Very dark grey/black to contrast with ocean
+                fillColor: '#2a2a2a', // Distinct medium-dark grey so landmasses are clearly visible against the black ocean
                 fillOpacity: 1,
                 stroke: false // Borders will be provided by the dark_only_labels tile layer!
             },
