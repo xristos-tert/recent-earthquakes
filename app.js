@@ -38,7 +38,7 @@ async function loadLandMask() {
         // Draw the solid land mass OVER the waves
         L.geoJSON(landGeoJSON, {
             style: {
-                fillColor: '#1e293b', // slate-800 (slightly lighter than the ocean background)
+                fillColor: '#111111', // Very dark grey/black to contrast with ocean
                 fillOpacity: 1,
                 stroke: false // Borders will be provided by the dark_only_labels tile layer!
             },
@@ -227,6 +227,10 @@ function processData(geojsonData) {
 
     // Populate Sidebar List
     const validFeatures = features.filter(f => f.properties.mag !== null);
+    
+    // Sort by magnitude descending
+    validFeatures.sort((a, b) => b.properties.mag - a.properties.mag);
+
     validFeatures.slice(0, 50).forEach(feature => { // Limit to 50 for performance in list
         const mag = feature.properties.mag;
         const place = feature.properties.place;

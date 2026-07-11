@@ -1,18 +1,17 @@
 :root {
-    --bg-dark: #0f172a;
-    --text-main: #f8fafc;
+    --bg-dark: #030303; /* Near black ocean */
+    --text-main: #e2e8f0;
     --text-muted: #94a3b8;
-    --accent: #38bdf8;
-    --accent-glow: rgba(56, 189, 248, 0.5);
-    --glass-bg: rgba(15, 23, 42, 0.75);
-    --glass-border: rgba(255, 255, 255, 0.1);
+    --accent: #ef4444; /* Changed accent to a more serious red/orange instead of light blue */
+    --panel-bg: #0a0a0a;
+    --panel-border: #333333;
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 body {
@@ -44,24 +43,19 @@ body {
     background-color: var(--bg-dark);
 }
 
-/* Glassmorphism Sidebar */
+/* Solid, Formal Sidebar */
 #sidebar {
     position: absolute;
-    top: 20px;
-    left: 20px;
+    top: 0;
+    left: 0;
     width: 380px;
-    height: calc(100vh - 40px);
+    height: 100vh;
     z-index: 1000; /* Above Leaflet */
-    background: var(--glass-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--glass-border);
-    border-radius: 24px;
+    background: var(--panel-bg);
+    border-right: 1px solid var(--panel-border);
     padding: 24px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    transition: transform 0.3s ease;
 }
 
 header {
@@ -69,11 +63,15 @@ header {
 }
 
 header h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    color: var(--accent);
-    text-shadow: 0 0 10px var(--accent-glow);
-    margin-bottom: 8px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-main);
+    margin-bottom: 4px;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 8px;
+    display: inline-block;
 }
 
 header p {
@@ -89,26 +87,26 @@ header p {
 
 .stat-box {
     flex: 1;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--glass-border);
-    border-radius: 16px;
-    padding: 16px;
-    text-align: center;
+    background: #111111;
+    border: 1px solid var(--panel-border);
+    padding: 12px;
+    text-align: left;
 }
 
 .stat-label {
     display: block;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .stat-value {
     display: block;
-    font-size: 1.8rem;
-    font-weight: 600;
+    font-size: 1.5rem;
+    font-weight: bold;
+    font-family: "Courier New", Courier, monospace;
     color: var(--text-main);
 }
 
@@ -139,33 +137,32 @@ header p {
 }
 
 .quake-item {
-    padding: 16px;
-    margin-bottom: 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
-    border: 1px solid transparent;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #111111;
+    border: 1px solid var(--panel-border);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.1s ease;
 }
 
 .quake-item:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: var(--glass-border);
-    transform: translateY(-2px);
+    background: #1a1a1a;
+    border-color: #555;
 }
 
 .quake-mag {
     display: inline-block;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-weight: 600;
+    padding: 2px 6px;
+    font-family: "Courier New", Courier, monospace;
+    font-weight: bold;
     font-size: 1rem;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
+    border: 1px solid;
 }
 
-.mag-low { background: #34d399; color: #022c22; }
-.mag-med { background: #fbbf24; color: #451a03; }
-.mag-high { background: #f87171; color: #450a0a; }
+.mag-low { color: #34d399; border-color: #34d399; background: transparent; }
+.mag-med { color: #fbbf24; border-color: #fbbf24; background: transparent; }
+.mag-high { color: #f87171; border-color: #f87171; background: transparent; }
 
 .quake-place {
     font-size: 0.95rem;
@@ -192,13 +189,14 @@ footer {
     background: var(--bg-dark);
 }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-    background: var(--glass-bg);
+    background: var(--panel-bg);
     color: var(--text-main);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--panel-border);
+    border-radius: 0;
 }
 .leaflet-popup-content {
-    margin: 16px;
+    margin: 12px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 .popup-title {
     font-weight: 600;
