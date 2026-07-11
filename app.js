@@ -3,102 +3,53 @@ const map = L.map('map', {
     zoomControl: false // Move it later or hide it for clean UI
 }).setView([20, 0], 2);
 
-// Add Dark CartoDB Map Tiles (perfect for dark mode dashboards)
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19
-}).addTo(map);
+// We won't use a base map tile layer for the ocean! The CSS background will provide the ocean color.
 
-// Add zoom control to bottom right
-L.control.zoom({
-    position: 'bottomright'
-}).addTo(map);
-
-// Pane for wave animations only
+// 1. Pane for wave animations only (Bottom)
 map.createPane('wavesPane');
 map.getPane('wavesPane').style.zIndex = 250;
 
-// Natural Earth 50m land polygons — used for SVG clip path + Turf land detection (higher res for smoother edges)
+// 2. Pane for the solid land polygons (Middle)
+map.createPane('landPane');
+map.getPane('landPane').style.zIndex = 260;
+
+// 3. Pane for CartoDB labels and borders (Top)
+map.createPane('labelsPane');
+map.getPane('labelsPane').style.zIndex = 270;
+// Ensure we can click through the labels to drag the map or click markers
+map.getPane('labelsPane').style.pointerEvents = 'none';
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19,
+    pane: 'labelsPane'
+}).addTo(map);
+
+// Natural Earth 50m land polygons
 const LAND_GEOJSON_URL = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_land.geojson';
 let landGeoJSON = null;
-let clipPathReady = false;
 
 async function loadLandMask() {
     try {
         const res = await fetch(LAND_GEOJSON_URL);
         landGeoJSON = await res.json();
+        
+        // Draw the solid land mass OVER the waves
+        L.geoJSON(landGeoJSON, {
+            style: {
+                fillColor: '#1e293b', // slate-800 (slightly lighter than the ocean background)
+                fillOpacity: 1,
+                stroke: false // Borders will be provided by the dark_only_labels tile layer!
+            },
+            pane: 'landPane',
+            interactive: false
+        }).addTo(map);
+        
     } catch (e) {
         console.error('Land mask load error:', e);
     }
 }
-
-// Build an SVG <clipPath> that defines the OCEAN area (world rect minus land polygons).
-// Applied to the wavesPane SVG <g> element so waves are invisible over land.
-function buildOceanClipPath() {
-    if (!landGeoJSON) return;
-
-    const wavePane = map.getPane('wavesPane');
-    const svg = wavePane.querySelector('svg');
-    if (!svg) return; // SVG created lazily by Leaflet on first layer add
-
-    // Ensure <defs> exists
-    let defs = svg.querySelector('defs');
-    if (!defs) {
-        defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-        svg.insertBefore(defs, svg.firstChild);
-    }
-
-    // Replace existing clip path
-    const old = defs.querySelector('#ocean-clip');
-    if (old) old.remove();
-
-    const clipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
-    clipPath.setAttribute('id', 'ocean-clip');
-
-    // World bounding rect in layer coordinates (huge, covers all zoom levels)
-    const pad = 50000;
-    const tl = map.latLngToLayerPoint([85, -180]);
-    const br = map.latLngToLayerPoint([-85, 180]);
-    let d = `M${tl.x - pad},${tl.y - pad} L${br.x + pad},${tl.y - pad} L${br.x + pad},${br.y + pad} L${tl.x - pad},${br.y + pad} Z `;
-
-    // Subtract each land polygon using even-odd rule -> leaves only ocean
-    for (const feature of landGeoJSON.features) {
-        const geom = feature.geometry;
-        const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
-        for (const rings of polys) {
-            const outer = rings[0];
-            const pts = [];
-            for (const coord of outer) {
-                const lp = map.latLngToLayerPoint([coord[1], coord[0]]);
-                pts.push(`${lp.x.toFixed(0)},${lp.y.toFixed(0)}`);
-            }
-            if (pts.length >= 3) {
-                d += `M${pts[0]} L${pts.slice(1).join(' L')} Z `;
-            }
-        }
-    }
-
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    path.setAttribute('fill-rule', 'evenodd');
-    clipPath.appendChild(path);
-    defs.appendChild(clipPath);
-
-    // CRITICAL FIX: Apply clip to the <g> container inside the SVG instead of the SVG root.
-    // Leaflet applies transform translations to the <g> element, so our coordinates must align with it.
-    const g = svg.querySelector('g');
-    if (g) {
-        g.setAttribute('clip-path', 'url(#ocean-clip)');
-    }
-    clipPathReady = true;
-}
-
-// Rebuild clip path on zoom (layer coordinates change)
-map.on('zoomend', () => {
-    clipPathReady = false;
-    buildOceanClipPath();
-});
 
 function isOnLand(lon, lat) {
     if (!landGeoJSON) return false;
@@ -141,9 +92,6 @@ function triggerTsunamiAnimation(latlng, color, mag) {
                 opacity: 1,
                 interactive: false
             }).addTo(map);
-
-            // Build/rebuild clip path now that the SVG element exists
-            if (!clipPathReady) buildOceanClipPath();
 
             const duration = 3000; // 3 seconds
             const startTime = performance.now();

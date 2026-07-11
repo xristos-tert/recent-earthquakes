@@ -228,9 +228,9 @@ footer {
 }
 
 /* Land mask pane — covers wave circles where they hit land */
-.leaflet-landMaskPane-pane {
+.leaflet-landPane-pane {
     pointer-events: none !important;
 }
-.leaflet-landMaskPane-pane path {
+.leaflet-landPane-pane path {
     stroke: none !important;
 }
